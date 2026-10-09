@@ -1,0 +1,338 @@
+// Height-field ray marcher for the flood scenes: terrain (with buildings and earthworks)
+// and the simulated water surface, both read from packed 16-bit textures.
+//
+// World units are metres: x east, y north, z up, measured from uZ.x and scaled by uVE
+// (1 = true scale). Water depth and velocity come from the recorded solver state for
+// this frame; only the surface micro-detail (rain rings, flow-advected ripples) is
+// procedural, and it is driven by the recorded rain rate and velocity field.
+
+uniform shader uTerrain;   // RG: elevation, B: material code (terrain grid refined by uUp)
+uniform shader uDepth;     // RG: water depth over uDepthSpan, B: 255 where wet (simulation grid)
+uniform shader uVel;       // RG: velocity u, v (128 = 0, +-uVelMax), simulation grid
+
+uniform float3 iResolution;
+uniform float3 uCamPos;
+uniform float3 uCamFwd;
+uniform float3 uCamRight;
+uniform float3 uCamUp;
+uniform float uFocal;      // image-height units
+uniform float3 uDomain;    // width, height, cell size (m)
+uniform float2 uZ;         // elevation of code 0, span of codes 0..65535 (m)
+uniform float uUp;         // terrain texels per simulation cell
+uniform float uDepthSpan;  // depth of code 65535 (m)
+uniform float uVE;         // vertical exaggeration
+uniform float uTime;       // simulated time (s)
+uniform float uRain;       // rain rate / peak rate, 0..1
+uniform float uWet;        // surface wetness, 0..1
+uniform float uOvercast;   // 0 clear .. 1 storm sky
+uniform float uVelMax;
+uniform float uBase;       // depth of the cut-away block below the lowest ground (m)
+uniform float uDebug;      // 0 normal, 1 pixel coordinates, 2 elevation texture, 3 water texture
+uniform float uOrtho;      // 1: top-down map, the image spans the whole domain
+
+const float PI = 3.14159265;
+
+float dec16(half4 c) {
+    return (floor(float(c.r) * 255.0 + 0.5) * 256.0 + floor(float(c.g) * 255.0 + 0.5)) / 65535.0;
+}
+
+// Manual bilinear filters of the packed textures (SkSL cannot pass shaders to functions);
+// tc in texel units, texel centres at i + 0.5.
+float bilinTerrain(float2 tc) {
+    float2 f = tc - 0.5;
+    float2 i0 = floor(f);
+    float2 w = f - i0;
+    float a = dec16(uTerrain.eval(i0 + float2(0.5, 0.5)));
+    float b = dec16(uTerrain.eval(i0 + float2(1.5, 0.5)));
+    float c = dec16(uTerrain.eval(i0 + float2(0.5, 1.5)));
+    float d = dec16(uTerrain.eval(i0 + float2(1.5, 1.5)));
+    return mix(mix(a, b, w.x), mix(c, d, w.x), w.y);
+}
+
+float bilinDepth(float2 tc) {
+    float2 f = tc - 0.5;
+    float2 i0 = floor(f);
+    float2 w = f - i0;
+    float a = dec16(uDepth.eval(i0 + float2(0.5, 0.5)));
+    float b = dec16(uDepth.eval(i0 + float2(1.5, 0.5)));
+    float c = dec16(uDepth.eval(i0 + float2(0.5, 1.5)));
+    float d = dec16(uDepth.eval(i0 + float2(1.5, 1.5)));
+    return mix(mix(a, b, w.x), mix(c, d, w.x), w.y);
+}
+
+float2 simTc(float2 xy) { return float2(xy.x, uDomain.y - xy.y) / uDomain.z; }
+
+float groundH(float2 xy) { return bilinTerrain(simTc(xy) * uUp) * uZ.y * uVE; }
+// Water depth (true metres) and the water surface: the solver depth laid on the refined ground.
+float depthM(float2 xy) { return bilinDepth(simTc(xy)) * uDepthSpan; }
+float waterH(float2 xy) { return groundH(xy) + depthM(xy) * uVE; }
+float surfaceH(float2 xy) { return waterH(xy); }
+
+float material(float2 xy) {
+    float2 tc = floor(simTc(xy) * uUp) + 0.5;
+    return floor(float(uTerrain.eval(tc).b) * 255.0 + 0.5);
+}
+
+float2 velocity(float2 xy) {
+    half4 c = uVel.eval(simTc(xy));
+    return (float2(c.r, c.g) * 255.0 - 128.0) / 127.0 * uVelMax;
+}
+
+// ---------------------------------------------------------------- noise
+float hash(float2 p) { return fract(sin(dot(p, float2(127.1, 311.7))) * 43758.5453); }
+float vnoise(float2 p) {
+    float2 i = floor(p);
+    float2 f = fract(p);
+    float2 u = f * f * (3.0 - 2.0 * f);
+    return mix(mix(hash(i), hash(i + float2(1, 0)), u.x), mix(hash(i + float2(0, 1)), hash(i + float2(1, 1)), u.x), u.y);
+}
+float fbm(float2 p) {
+    float s = 0.0;
+    float a = 0.5;
+    for (int i = 0; i < 5; i++) {
+        s += a * vnoise(p);
+        p = p * 2.03 + float2(17.1, 9.7);
+        a *= 0.5;
+    }
+    return s;
+}
+
+// ---------------------------------------------------------------- sky and light
+float3 sunDir() { return normalize(float3(-0.72, 0.28, 0.62)); }
+
+float3 skyColor(float3 rd) {
+    float up = clamp(rd.z, -0.2, 1.0);
+    float3 clear = mix(float3(0.62, 0.72, 0.84), float3(0.20, 0.36, 0.66), pow(max(up, 0.0), 0.6));
+    float3 storm = mix(float3(0.42, 0.45, 0.49), float3(0.22, 0.25, 0.30), pow(max(up, 0.0), 0.7));
+    float3 c = mix(clear, storm, uOvercast);
+    float sd = max(dot(rd, sunDir()), 0.0);
+    c += (1.0 - uOvercast) * (float3(1.0, 0.85, 0.6) * pow(sd, 600.0) * 18.0 + float3(1.0, 0.8, 0.55) * pow(sd, 8.0) * 0.18);
+    return c;
+}
+
+float3 sunColor() { return mix(float3(2.9, 2.6, 2.2), float3(0.35, 0.36, 0.38), uOvercast); }
+float3 ambientColor() { return mix(float3(0.42, 0.52, 0.66), float3(0.62, 0.65, 0.70), uOvercast); }
+
+float softShadow(float3 p) {
+    if (uOvercast > 0.97) { return 1.0; }
+    float3 l = sunDir();
+    float res = 1.0;
+    float t = 0.6;
+    for (int i = 0; i < 28; i++) {
+        float3 q = p + l * t;
+        if (q.x < 0.0 || q.y < 0.0 || q.x > uDomain.x || q.y > uDomain.y) { break; }
+        float d = q.z - groundH(q.xy);
+        res = min(res, 10.0 * d / t);
+        if (res < 0.0) { break; }
+        t += clamp(d * 0.6, 0.6, 24.0);
+    }
+    return mix(clamp(res, 0.0, 1.0), 1.0, uOvercast);
+}
+
+float3 groundNormal(float2 xy) {
+    float e = uDomain.z / uUp;
+    float hx = groundH(xy + float2(e, 0)) - groundH(xy - float2(e, 0));
+    float hy = groundH(xy + float2(0, e)) - groundH(xy - float2(0, e));
+    return normalize(float3(-hx, -hy, 2.0 * e));
+}
+
+float3 albedo(float2 xy, float3 n, float m) {
+    float g = fbm(xy * 0.08);
+    float fine = fbm(xy * 0.9);
+    // Grass and field patches; drier, browner where the noise is high.
+    float3 grass = mix(float3(0.07, 0.12, 0.035), float3(0.11, 0.135, 0.05), smoothstep(0.3, 0.8, g));
+    grass *= 0.88 + 0.24 * fine;
+    float slope = 1.0 - n.z;
+    float3 dirt = float3(0.17, 0.13, 0.09) * (0.85 + 0.3 * fine);
+    float3 a = mix(grass, dirt, smoothstep(0.08 * uVE, 0.35 * uVE, slope));
+    if (m >= 250.0) {
+        // Buildings: plaster walls, slate roof.
+        a = (n.z > 0.35) ? float3(0.11, 0.10, 0.10) * (0.9 + 0.2 * fine) : float3(0.52, 0.47, 0.40);
+    } else if (m >= 1.0 && m <= 120.0) {
+        // Placed fill: fresh, compacted soil.
+        a = mix(a, float3(0.24, 0.16, 0.10) * (0.9 + 0.2 * fine), clamp(m / 15.0, 0.0, 1.0));
+    } else if (m > 120.0 && m <= 200.0) {
+        a = mix(a, float3(0.20, 0.14, 0.09), clamp((m - 120.0) / 15.0, 0.0, 1.0));
+    }
+    // Rain-soaked surfaces are darker.
+    return a * mix(1.0, 0.62, uWet * (m >= 250.0 ? 0.5 : 1.0));
+}
+
+float3 litSurface(float3 p, float3 n, float3 a, float3 rd) {
+    float3 l = sunDir();
+    float sh = softShadow(p + n * 0.3);
+    float ao = 0.6 + 0.4 * clamp(n.z, 0.0, 1.0);
+    float3 col = a * (sunColor() * max(dot(n, l), 0.0) * sh + ambientColor() * ao * (0.55 + 0.45 * n.z));
+    // A little wet sheen under clear sky.
+    float3 h = normalize(l - rd);
+    col += uWet * (1.0 - uOvercast) * sh * float3(0.25) * pow(max(dot(n, h), 0.0), 60.0);
+    return col;
+}
+
+// ---------------------------------------------------------------- water surface detail
+// Expanding rings from rain drops on a 0.7 m lattice, one drop per cell per ~1.1 s.
+float2 rainRipple(float2 xy) {
+    float2 g = xy / 0.7;
+    float2 acc = float2(0.0);
+    for (int j = -1; j <= 1; j++) {
+        for (int i = -1; i <= 1; i++) {
+            float2 c = floor(g) + float2(float(i), float(j));
+            float r = hash(c);
+            float2 o = c + 0.5 + 0.35 * float2(hash(c + 3.1) - 0.5, hash(c + 7.7) - 0.5);
+            float ph = fract(uTime * 0.9 + r);
+            float2 d = g - o;
+            float dist = length(d);
+            float ring = sin(PI * 2.0 * (dist - ph * 0.9) * 3.0) * (1.0 - ph) * smoothstep(0.9, 0.0, abs(dist - ph * 0.9) * 3.0);
+            acc += (dist > 1e-3 ? d / dist : float2(0.0)) * ring * step(r, uRain * 1.2);
+        }
+    }
+    return acc * 0.12;
+}
+
+// Ripples carried by the simulated velocity (two-phase flow map).
+float2 flowRipple(float2 xy, float2 v) {
+    float period = 2.5;
+    float p0 = fract(uTime / period);
+    float p1 = fract(uTime / period + 0.5);
+    float w0 = 1.0 - abs(p0 * 2.0 - 1.0);
+    float e = 0.15;
+    float2 q0 = xy * 1.6 - v * p0 * period * 1.6;
+    float2 q1 = xy * 1.6 - v * p1 * period * 1.6 + 0.37;
+    float2 g0 = float2(vnoise(q0 + float2(e, 0)) - vnoise(q0 - float2(e, 0)), vnoise(q0 + float2(0, e)) - vnoise(q0 - float2(0, e)));
+    float2 g1 = float2(vnoise(q1 + float2(e, 0)) - vnoise(q1 - float2(e, 0)), vnoise(q1 + float2(0, e)) - vnoise(q1 - float2(0, e)));
+    float speed = clamp(length(v) / 0.6, 0.0, 1.0);
+    return (g0 * w0 + g1 * (1.0 - w0)) * (0.15 + 0.85 * speed) * 0.9;
+}
+
+float3 shadeWater(float3 p, float3 rd, float dW, float t) {
+    float2 xy = p.xy;
+    float e = uDomain.z * 0.5;
+    float hx = waterH(xy + float2(e, 0)) - waterH(xy - float2(e, 0));
+    float hy = waterH(xy + float2(0, e)) - waterH(xy - float2(0, e));
+    float2 v = velocity(xy);
+    float2 slope = float2(hx, hy) / (2.0 * e);
+    float detail = clamp(1.0 - t / 900.0, 0.25, 1.0);
+    slope += (flowRipple(xy, v) + rainRipple(xy)) * detail * clamp(dW / 0.01, 0.0, 1.0);
+    float3 n = normalize(float3(-slope, 1.0));
+
+    // Bed below, attenuated by turbid flood water (absorption + scattering, Beer-Lambert).
+    float3 bed = litSurface(float3(xy, groundH(xy)), groundNormal(xy), albedo(xy, groundNormal(xy), 0.0) * 0.8, rd);
+    float3 sigma = float3(9.0, 11.0, 15.0);                    // 1/m, silt-laden water
+    float path = dW * (1.0 + 1.0 / max(-rd.z, 0.15));
+    float3 trans = exp(-sigma * path);
+    float3 silt = float3(0.085, 0.062, 0.038);
+    float3 light = sunColor() * max(sunDir().z, 0.0) * softShadow(p + float3(0, 0, 0.2)) + ambientColor();
+    float3 body = bed * trans + silt * light * (1.0 - trans);
+
+    float cosi = clamp(dot(-rd, n), 0.0, 1.0);
+    float F = 0.02 + 0.98 * pow(1.0 - cosi, 5.0);
+    float3 r = reflect(rd, n);
+    float3 refl = skyColor(r);
+    float3 col = mix(body, refl, F);
+    // Shallow edges blend into the soaked ground.
+    return col;
+}
+
+// ---------------------------------------------------------------- main
+half4 main(float2 fc) {
+    if (uDebug > 0.5 && uDebug < 1.5) { return half4(half(fc.x / iResolution.x), half(fc.y / iResolution.y), 0.0, 1.0); }
+    if (uDebug > 1.5 && uDebug < 2.5) {
+        float2 xy = float2(fc.x / iResolution.x * uDomain.x, (1.0 - fc.y / iResolution.y) * uDomain.y);
+        float v = bilinTerrain(simTc(xy) * uUp);
+        return half4(half(v), half(fract(v * 20.0)), half(material(xy) / 255.0), 1.0);
+    }
+    if (uDebug > 2.5) {
+        float2 xy = float2(fc.x / iResolution.x * uDomain.x, (1.0 - fc.y / iResolution.y) * uDomain.y);
+        float d = depthM(xy);
+        return half4(0.0, 0.0, half(clamp(d * 5.0, 0.0, 1.0)), 1.0);
+    }
+    float2 uv = (fc - 0.5 * iResolution.xy) / iResolution.y;
+    uv.y = -uv.y;
+    float3 rd = normalize(uCamFwd * uFocal + uCamRight * uv.x + uCamUp * uv.y);
+    float3 ro = uCamPos;
+
+    float top = uZ.y * uVE;
+    float3 bmin = float3(0.0, 0.0, -uBase * uVE);
+    float3 bmax = float3(uDomain.x, uDomain.y, top);
+    float3 inv = 1.0 / rd;
+    float3 t0 = (bmin - ro) * inv;
+    float3 t1 = (bmax - ro) * inv;
+    float3 tsm = min(t0, t1);
+    float3 tbg = max(t0, t1);
+    float tn = max(max(tsm.x, tsm.y), tsm.z);
+    float tf = min(min(tbg.x, tbg.y), tbg.z);
+
+    float3 col = skyColor(rd);
+    float tHit = -1.0;
+    bool side = false;
+    if (uOrtho > 0.5) {
+        // Map view: looking straight down; the surface height is read directly.
+        float2 xy = float2(fc.x / iResolution.x * uDomain.x, (1.0 - fc.y / iResolution.y) * uDomain.y);
+        rd = float3(0.0, 0.0, -1.0);
+        ro = float3(xy, top + 40.0);
+        tHit = ro.z - surfaceH(xy);
+    } else if (tf > max(tn, 0.0)) {
+        float t = max(tn, 0.0);
+        float3 p = ro + rd * t;
+        bool sideEntry = tn > 0.0 && (tsm.x >= max(tsm.y, tsm.z) || tsm.y >= max(tsm.x, tsm.z));
+        if (sideEntry && p.z < surfaceH(clamp(p.xy, float2(0.01), uDomain.xy - 0.01))) {
+            side = true;
+            tHit = t;
+        } else {
+            float tPrev = t;
+            for (int i = 0; i < 260; i++) {
+                p = ro + rd * t;
+                float d = p.z - surfaceH(p.xy);
+                if (d < 0.0) { tHit = t; break; }
+                tPrev = t;
+                t += max(d * 0.42, 0.04 + t * 0.0012);
+                if (t > tf) { break; }
+            }
+            if (tHit > 0.0) {
+                float a = tPrev;
+                float b = tHit;
+                for (int k = 0; k < 7; k++) {
+                    float m = 0.5 * (a + b);
+                    float3 q = ro + rd * m;
+                    if (q.z - surfaceH(q.xy) < 0.0) { b = m; } else { a = m; }
+                }
+                tHit = b;
+            }
+        }
+    }
+
+    if (tHit > 0.0) {
+        float3 p = ro + rd * tHit;
+        if (side) {
+            // Cut face of the block: topsoil over subsoil, darker with depth.
+            float2 xy = clamp(p.xy, float2(0.01), uDomain.xy - 0.01);
+            float below = (surfaceH(xy) - p.z) / uVE;
+            float3 a = mix(float3(0.16, 0.11, 0.07), float3(0.30, 0.22, 0.14), smoothstep(0.3, 1.2, below));
+            a = mix(a, float3(0.22, 0.20, 0.17), smoothstep(4.0, 7.0, below)) * (0.85 + 0.3 * fbm(float2(p.x + p.y, p.z / uVE) * 0.6));
+            float3 n = abs(tsm.x - tn) < 1e-4 ? float3(sign(-rd.x), 0, 0) : float3(0, sign(-rd.y), 0);
+            col = a * (sunColor() * max(dot(n, sunDir()), 0.0) + ambientColor() * 0.75);
+        } else {
+            float dm = depthM(p.xy);
+            float3 n = groundNormal(p.xy);
+            float m = material(p.xy);
+            float3 a = albedo(p.xy, n, m);
+            // Grass stands through sheet flow: below ~3 cm the water shows as soaked ground,
+            // above it as an open water surface.
+            float open = m >= 250.0 ? 0.0 : smoothstep(0.005, 0.03, dm);
+            float soak = clamp(dm / 0.005, 0.0, 1.0);
+            col = litSurface(p, n, a * mix(1.0, 0.7, soak), rd);
+            if (open > 0.0) {
+                col = mix(col, shadeWater(p, rd, dm, tHit), open);
+            }
+        }
+        // Aerial perspective, thicker in rain.
+        float fog = 1.0 - exp(-tHit * (0.00008 + 0.00025 * uRain));
+        col = mix(col, skyColor(normalize(float3(rd.xy, 0.02))), fog);
+    }
+
+    // Filmic tone map (ACES fit) and sRGB-ish encode.
+    col *= 1.1;
+    col = clamp((col * (2.51 * col + 0.03)) / (col * (2.43 * col + 0.59) + 0.14), 0.0, 1.0);
+    col = pow(col, float3(1.0 / 2.2));
+    return half4(half3(col), 1.0);
+}

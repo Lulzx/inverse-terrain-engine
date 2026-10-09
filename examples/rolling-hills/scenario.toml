@@ -1,0 +1,38 @@
+schema_version = "0.2"
+scenario_id = "rolling-hills-001"
+
+[terrain]
+path = "dem.tif"
+crs = "EPSG:32643"
+vertical_datum = "synthetic-local"
+
+[hydrology]
+duration_s = 2700
+sync_interval_s = 60
+rainfall_hyetograph = [[0, 0], [300, 85], [1200, 45], [1800, 0]]
+manning_n = 0.045
+
+[hydrology.infiltration]
+model = "constant_capacity"
+capacity_mm_h = 8.0
+
+[boundaries]
+segments = [{ kind = "transmissive", side = "south" }]
+
+[design]
+editable_mask = "editable.geojson"
+primitives = "earthworks.toml"
+max_abs_elevation_change_m = 1.0
+max_earthwork_volume_m3 = 3000
+placement = "corridor"
+
+[objectives]
+protected_areas = "protected.geojson"
+downstream_guard_areas = "guard.geojson"
+depth_threshold_m = 0.05
+guard_tolerance_m = 0.01
+
+[optimizer]
+seed = 7
+max_simulations = 300
+fidelity_levels = [1]

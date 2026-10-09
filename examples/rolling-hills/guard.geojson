@@ -1,0 +1,38 @@
+{
+ "type": "FeatureCollection",
+ "features": [
+  {
+   "type": "Feature",
+   "properties": {
+    "name": "west_farm"
+   },
+   "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+     [
+      [
+       500150.0,
+       4200020.0
+      ],
+      [
+       500240.0,
+       4200020.0
+      ],
+      [
+       500240.0,
+       4200080.0
+      ],
+      [
+       500150.0,
+       4200080.0
+      ],
+      [
+       500150.0,
+       4200020.0
+      ]
+     ]
+    ]
+   }
+  }
+ ]
+}

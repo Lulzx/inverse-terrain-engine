@@ -2,3 +2,12 @@ target/
 runs/
 *.swp
 .impeccable/
+
+# Rendered media is never committed (render it with the commands in the README)
+*.mp4
+*.webm
+*.mov
+*.mkv
+*.avi
+.DS_Store
+__pycache__/
