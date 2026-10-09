@@ -174,6 +174,8 @@ impl<'a> Flood3d<'a> {
         let label_fill = if k == 0 { INK } else { "#ffc88c" };
 
         // Building pins and depth card.
+        // Stems of pins whose labels would collide grow until the labels clear each other.
+        let mut placed: Vec<(f32, f32, f32)> = Vec::new(); // label x0, x1, baseline
         let mut pins = Vec::new();
         for (h, (house, top)) in m.houses.iter().zip(&v.house_tops).enumerate() {
             let d = v.series[h][i];
@@ -183,11 +185,17 @@ impl<'a> Flood3d<'a> {
             if let Some((px, py)) = cam.project(p, WIDTH as f32, STRIP) {
                 let py = py + y0;
                 let name = house.name.replace('_', " ");
+                let (x0, x1) = (px - 8.0, px + 16.0 + 8.0 * name.len() as f32);
+                let mut stem = 26.0;
+                while placed.iter().any(|&(a, b, y)| x0 < b && a < x1 && ((py - stem + 1.0) - y).abs() < 20.0) {
+                    stem += 22.0;
+                }
+                placed.push((x0, x1, py - stem + 1.0));
                 pins.push(fframes::svgr!(
                     <g>
-                        <line x1={px} y1={py} x2={px} y2={py - 26.0} stroke="#ffffff" stroke-opacity="0.8" stroke-width="1.5" />
-                        <circle cx={px} cy={py - 30.0} r="6" fill={col} stroke="#0b1422" stroke-width="1.5" />
-                        <text x={px + 10.0} y={py - 25.0} font-family={FONT} font-size="15" font-weight={WEIGHT} fill={INK} stroke="#0b1422" stroke-width="3" paint-order="stroke">
+                        <line x1={px} y1={py} x2={px} y2={py - stem} stroke="#ffffff" stroke-opacity="0.8" stroke-width="1.5" />
+                        <circle cx={px} cy={py - stem - 4.0} r="6" fill={col} stroke="#0b1422" stroke-width="1.5" />
+                        <text x={px + 10.0} y={py - stem + 1.0} font-family={FONT} font-size="15" font-weight={WEIGHT} fill={INK} stroke="#0b1422" stroke-width="3" paint-order="stroke">
                             {name}
                         </text>
                     </g>

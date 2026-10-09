@@ -14,6 +14,13 @@ Technical specification: [`spec.md`](spec.md) (v0.6) · Numerical method: [`docs
 
 **Figure 1.** `diverted-flood` example (90 × 70 cells at 5 m, 40 min design storm). (a) Peak water depth with no change. (b) Peak depth with the optimized design: one 94 m berm (dashed red; the swale on the right is redundant, see §4). (c) Difference (b) − (a). Protected assets are the black rectangles. Their peak depths fall from 0.033 and 0.062 m to 0.005 and 0.012 m, below the 0.05 m threshold. Water ponds upstream of the berm (red in c; 7100 m² worsened by more than 1 cm). That area is outside the guard zones, whose maximum worsening is 0.000 m.
 
+**Simulation videos.** The same runs animated over the storm, with no change (top or left) beside the optimized design (bottom or right). The frames are rendered on the GPU from one solver state per video frame, every 4 s of simulated time, with no interpolation. The 3D view ray-marches the terrain and water at true vertical scale, shading turbid water by its depth and wetting the ground under the rain of the hyetograph. The videos are not committed; §5 shows how to render them.
+
+<p align="center"><img src="docs/img/video_rolling_hills_3d.jpg" width="100%" alt="3D video frame of the rolling-hills example at 18 min"></p>
+<p align="center"><img src="docs/img/video_rolling_hills_2d.jpg" width="100%" alt="2D video frame of the rolling-hills example at 18 min"></p>
+
+**Video frames** at 18 min of the `rolling-hills` videos: hills and gullies above four houses, 120 × 96 cells at 5 m (written by `scripts/make_rolling_hills.py`, not `itr synth`). With no change house d floods above its 5 cm limit. The optimized design (two berms and a swale, 293 m³) keeps all four houses below the limit and raises the downstream area (orange) by at most 1 mm, within its 1 cm tolerance; J falls by 78%.
+
 ## 1. Problem statement
 
 Given a projected DEM $z(x,y)$, a rainfall hyetograph and boundary conditions, protected footprints $A_k$ with depth thresholds $\eta_k$, and guard areas $G$:
@@ -121,6 +128,14 @@ python3 scripts/lever_study.py --seeds 5                            # Table 2, F
 for t in 2 4 8; do ./target/release/itr bench --threads $t --json; done   # Figure 5 (right); merged into docs/data/bench.json
 uv run --with numpy --with matplotlib --with tifffile scripts/figures.py
 ./target/release/itr view runs/readme/diverted-flood                # interactive viewer, opens from file://
+# Simulation videos: re-simulate each design at the video frame rate, then render with fframes (GPU, Metal)
+uv run --with numpy --with tifffile scripts/make_rolling_hills.py
+./target/release/itr optimize --scenario examples/rolling-hills/scenario.toml    --out runs/readme/rolling-hills
+uv run --with numpy --with scipy --with tifffile --with lz4 scripts/video_data.py --example rolling-hills
+cd video
+cargo run --release -- render --data ../runs/video/rolling-hills -o ../docs/video/rolling-hills-3d.mp4
+cargo run --release -- render --data ../runs/video/rolling-hills --layout 2d -o ../docs/video/rolling-hills.mp4
+cargo run --release -- preview --data ../runs/video/rolling-hills   # real-time window
 ```
 
 Search traces are bitwise identical across thread counts and across kill and `--resume`. Wall times depend on the host and its load; the JSON files record both.
@@ -174,7 +189,8 @@ Exit codes: 0 OK · 1 error · 2 infeasible problem (a valid result) · 3 valida
 | `itr-gpu` | Optional wgpu/WGSL solver for batched `f32` candidates |
 | `itr-cli` | The `itr` binary: GeoTIFF/GeoJSON I/O, commands, result files, revalidation, viewer bundle |
 | `viewer/` | Static WebGL2 viewer, embedded in the binary |
-| `scripts/` | Lever study and figure generation (Python; not used by the engine) |
+| `scripts/` | Lever study, figures, the `rolling-hills` example and video data (Python; not used by the engine) |
+| `video/` | GPU video renderer (fframes and SkSL; separate Cargo workspace) |
 
 ## 8. Limitations
 
