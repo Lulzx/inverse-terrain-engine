@@ -1,0 +1,38 @@
+{
+  "features": [
+    {
+      "geometry": {
+        "coordinates": [
+          [
+            [
+              500300.0,
+              4200020.0
+            ],
+            [
+              500420.0,
+              4200020.0
+            ],
+            [
+              500420.0,
+              4200090.0
+            ],
+            [
+              500300.0,
+              4200090.0
+            ],
+            [
+              500300.0,
+              4200020.0
+            ]
+          ]
+        ],
+        "type": "Polygon"
+      },
+      "properties": {
+        "name": "neighbour"
+      },
+      "type": "Feature"
+    }
+  ],
+  "type": "FeatureCollection"
+}

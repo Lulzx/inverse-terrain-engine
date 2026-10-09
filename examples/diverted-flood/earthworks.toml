@@ -1,0 +1,13 @@
+[[primitive]]
+kind = "berm"
+height_m = [0.0, 1.0]
+width_m = [4.0, 10.0]
+length_m = [20.0, 160.0]
+angle_deg = [0.0, 180.0]
+
+[[primitive]]
+kind = "swale"
+height_m = [0.0, 0.6]
+width_m = [4.0, 10.0]
+length_m = [20.0, 160.0]
+angle_deg = [0.0, 180.0]

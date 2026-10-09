@@ -1,0 +1,33 @@
+schema_version = "0.2"
+scenario_id = "infeasible-problem-001"
+
+[terrain]
+path = "dem.tif"
+crs = "EPSG:32643"
+vertical_datum = "synthetic-local"
+
+[hydrology]
+duration_s = 1800
+sync_interval_s = 60
+rainfall_hyetograph = [[0, 50], [1200, 50], [1260, 0]]
+manning_n = 0.04
+
+[hydrology.infiltration]
+model = "none"
+
+[design]
+editable_mask = "editable.geojson"
+primitives = "earthworks.toml"
+max_abs_elevation_change_m = 0.5
+max_earthwork_volume_m3 = 300
+
+[objectives]
+protected_areas = "protected.geojson"
+depth_threshold_m = 0.05
+guard_tolerance_m = 0.005
+guard_whole_map = true
+
+[optimizer]
+seed = 3
+max_simulations = 40
+fidelity_levels = [1]

@@ -1,0 +1,52 @@
+schema_version = "0.2"
+scenario_id = "synthetic-valley-001"
+
+[terrain]
+path = "dem.tif"
+crs = "EPSG:32643"
+vertical_datum = "synthetic-local"
+elevation_units = "m"
+expected_cell_size_m = 5.0
+
+[hydrology]
+duration_s = 2400
+sync_interval_s = 60
+rainfall_hyetograph = [[0, 0], [300, 30], [1200, 10], [1800, 0]]
+manning_n = 0.04
+
+[hydrology.infiltration]
+model = "constant_capacity"
+capacity_mm_h = 5.0
+
+[boundaries]
+default = "wall"
+segments = [
+  { kind = "inflow", side = "west", hydrograph = [[0, 0], [600, 20], [1500, 6], [2400, 1]], range_m = [170, 230] },
+  { kind = "transmissive", side = "east" },
+]
+
+[design]
+editable_mask = "editable.geojson"
+primitives = "earthworks.toml"
+max_abs_elevation_change_m = 1.0
+max_earthwork_volume_m3 = 2500
+max_edit_slope = 0.5
+require_no_offsite_worsening = true
+
+[objectives]
+protected_areas = "protected.geojson"
+downstream_guard_areas = "guard.geojson"
+depth_threshold_m = 0.10
+guard_tolerance_m = 0.03
+earthwork_weight = 1e-5
+
+[solver]
+precision = "f32"
+cfl = 0.35
+
+[optimizer]
+method = "cma_es"
+seed = 12345
+max_simulations = 120
+fidelity_levels = [2, 1]
+level_budget_share = [0.6, 0.4]

@@ -1,0 +1,39 @@
+{
+  "features": [
+    {
+      "geometry": {
+        "coordinates": [
+          [
+            [
+              500145.0,
+              4200145.0
+            ],
+            [
+              500175.0,
+              4200145.0
+            ],
+            [
+              500175.0,
+              4200175.0
+            ],
+            [
+              500145.0,
+              4200175.0
+            ],
+            [
+              500145.0,
+              4200145.0
+            ]
+          ]
+        ],
+        "type": "Polygon"
+      },
+      "properties": {
+        "name": "bowl_houses",
+        "threshold_m": 0.05
+      },
+      "type": "Feature"
+    }
+  ],
+  "type": "FeatureCollection"
+}

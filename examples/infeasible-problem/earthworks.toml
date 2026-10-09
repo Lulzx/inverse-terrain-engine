@@ -1,0 +1,10 @@
+[[primitive]]
+kind = "berm"
+height_m = [0.0, 0.5]
+width_m = [4.0, 8.0]
+length_m = [10.0, 40.0]
+
+[[primitive]]
+kind = "mound"
+height_m = [0.0, 0.5]
+width_m = [6.0, 20.0]

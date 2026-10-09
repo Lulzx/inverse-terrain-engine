@@ -1,0 +1,38 @@
+{
+  "features": [
+    {
+      "geometry": {
+        "coordinates": [
+          [
+            [
+              500240.0,
+              4200040.0
+            ],
+            [
+              500300.0,
+              4200040.0
+            ],
+            [
+              500300.0,
+              4200280.0
+            ],
+            [
+              500240.0,
+              4200280.0
+            ],
+            [
+              500240.0,
+              4200040.0
+            ]
+          ]
+        ],
+        "type": "Polygon"
+      },
+      "properties": {
+        "name": "east_rim"
+      },
+      "type": "Feature"
+    }
+  ],
+  "type": "FeatureCollection"
+}

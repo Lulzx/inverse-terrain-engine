@@ -1,0 +1,38 @@
+{
+  "features": [
+    {
+      "geometry": {
+        "coordinates": [
+          [
+            [
+              500300.0,
+              4200095.0
+            ],
+            [
+              500460.0,
+              4200095.0
+            ],
+            [
+              500460.0,
+              4200155.0
+            ],
+            [
+              500300.0,
+              4200155.0
+            ],
+            [
+              500300.0,
+              4200095.0
+            ]
+          ]
+        ],
+        "type": "Polygon"
+      },
+      "properties": {
+        "name": "south_neighbourhood"
+      },
+      "type": "Feature"
+    }
+  ],
+  "type": "FeatureCollection"
+}

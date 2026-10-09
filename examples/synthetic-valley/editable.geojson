@@ -1,0 +1,38 @@
+{
+  "features": [
+    {
+      "geometry": {
+        "coordinates": [
+          [
+            [
+              500180.0,
+              4200150.0
+            ],
+            [
+              500315.0,
+              4200150.0
+            ],
+            [
+              500315.0,
+              4200290.0
+            ],
+            [
+              500180.0,
+              4200290.0
+            ],
+            [
+              500180.0,
+              4200150.0
+            ]
+          ]
+        ],
+        "type": "Polygon"
+      },
+      "properties": {
+        "name": "north_fields"
+      },
+      "type": "Feature"
+    }
+  ],
+  "type": "FeatureCollection"
+}

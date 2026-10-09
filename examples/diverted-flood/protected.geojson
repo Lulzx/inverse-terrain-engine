@@ -1,0 +1,73 @@
+{
+  "features": [
+    {
+      "geometry": {
+        "coordinates": [
+          [
+            [
+              500190.0,
+              4200030.0
+            ],
+            [
+              500215.0,
+              4200030.0
+            ],
+            [
+              500215.0,
+              4200050.0
+            ],
+            [
+              500190.0,
+              4200050.0
+            ],
+            [
+              500190.0,
+              4200030.0
+            ]
+          ]
+        ],
+        "type": "Polygon"
+      },
+      "properties": {
+        "name": "village_w",
+        "threshold_m": 0.05
+      },
+      "type": "Feature"
+    },
+    {
+      "geometry": {
+        "coordinates": [
+          [
+            [
+              500225.0,
+              4200030.0
+            ],
+            [
+              500250.0,
+              4200030.0
+            ],
+            [
+              500250.0,
+              4200050.0
+            ],
+            [
+              500225.0,
+              4200050.0
+            ],
+            [
+              500225.0,
+              4200030.0
+            ]
+          ]
+        ],
+        "type": "Polygon"
+      },
+      "properties": {
+        "name": "village_e",
+        "threshold_m": 0.05
+      },
+      "type": "Feature"
+    }
+  ],
+  "type": "FeatureCollection"
+}

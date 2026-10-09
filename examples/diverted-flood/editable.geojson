@@ -1,0 +1,38 @@
+{
+  "features": [
+    {
+      "geometry": {
+        "coordinates": [
+          [
+            [
+              500060.0,
+              4200060.0
+            ],
+            [
+              500400.0,
+              4200060.0
+            ],
+            [
+              500400.0,
+              4200200.0
+            ],
+            [
+              500060.0,
+              4200200.0
+            ],
+            [
+              500060.0,
+              4200060.0
+            ]
+          ]
+        ],
+        "type": "Polygon"
+      },
+      "properties": {
+        "name": "hillside"
+      },
+      "type": "Feature"
+    }
+  ],
+  "type": "FeatureCollection"
+}
