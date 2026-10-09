@@ -6,13 +6,10 @@ Search for small earthworks (berms, swales, cuts, mounds) that reduce flood dept
 
 *`diverted-flood` example: the optimized berm (horizontal orange outline) turns the flow away from the houses (yellow boxes). J drops from 0.0279 to 0.0083, and no guard cell gets worse.*
 
-```mermaid
-flowchart LR
-  A[DEM + storm + assets] --> B[propose earthworks]
-  B --> C[simulate flood]
-  C --> D{assets safer and<br/>no one else worse?}
-  D -- learn --> B
-  D -- best --> E[terrain diff + report]
+```text
+DEM + storm + assets ─▶ propose earthworks ─▶ simulate flood ─▶ score ─▶ best design + report
+                              ▲                                   │
+                              └────────────── learn ──────────────┘
 ```
 
 - Design and research plan: [`spec.md`](spec.md). Implementation status, deviations and measured numbers are in Appendix B.
