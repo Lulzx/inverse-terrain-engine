@@ -1,0 +1,13 @@
+[package]
+name = "itr-hydro"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+itr-core = { version = "0.1.0", path = "../itr-core" }
+serde = { version = "1.0.229", features = ["derive"] }
+
+[dev-dependencies]
+proptest = { version = "1", default-features = false, features = ["std"] }
