@@ -1,0 +1,26 @@
+[package]
+name = "itr-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[[bin]]
+name = "itr"
+path = "src/main.rs"
+
+[dependencies]
+itr-core = { version = "0.1.0", path = "../itr-core" }
+itr-hydro = { version = "0.1.0", path = "../itr-hydro" }
+itr-opt = { version = "0.1.0", path = "../itr-opt" }
+lexopt = "0.3.2"
+lz4_flex = { version = "0.14.0", default-features = false, features = ["std", "safe-encode", "safe-decode"] }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = { version = "1.0.151", features = ["float_roundtrip"] }
+tiff = { version = "0.11.3", default-features = false, features = ["deflate", "lzw"] }
+rayon = "1.12.0"
+itr-gpu = { version = "0.1.0", path = "../itr-gpu", optional = true }
+
+[features]
+# wgpu backend for `itr bench --backend gpu` (spec §7.8).
+gpu = ["dep:itr-gpu"]

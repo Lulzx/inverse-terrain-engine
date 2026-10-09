@@ -1,6 +1,8 @@
 [workspace]
 resolver = "3"
-members = ["crates/itr-core", "crates/itr-hydro", "crates/itr-opt", "crates/itr-gpu"]
+members = ["crates/itr-core", "crates/itr-hydro", "crates/itr-opt", "crates/itr-cli", "crates/itr-gpu"]
+# The GPU backend (wgpu) is opt-in: `cargo build -p itr-cli --features gpu`.
+default-members = ["crates/itr-core", "crates/itr-hydro", "crates/itr-opt", "crates/itr-cli"]
 
 [workspace.package]
 version = "0.1.0"
