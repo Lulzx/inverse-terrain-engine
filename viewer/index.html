@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>itr viewer</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root { --bg: #14161a; --panel: #1d2026; --fg: #e6e6e6; --muted: #9aa0a6; --accent: #4fa3ff; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.45 system-ui, -apple-system, sans-serif; }
+  header { display: flex; gap: 16px; align-items: center; padding: 8px 12px; background: var(--panel); border-bottom: 1px solid #2b2f36; flex-wrap: wrap; }
+  header h1 { font-size: 18px; margin: 0; font-weight: 650; letter-spacing: -0.01em; }
+  #warn { color: #ffcf66; font-size: 11px; }
+  #maps { display: grid; grid-template-columns: repeat(var(--cols, 3), 1fr); gap: 6px; padding: 6px; height: calc(100vh - 150px); }
+  .map { position: relative; background: #000; border: 1px solid #2b2f36; overflow: hidden; }
+  .map canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .map .label { position: absolute; left: 8px; top: 6px; background: rgba(0,0,0,.6); padding: 2px 6px; border-radius: 3px; pointer-events: none; }
+  .map .legend { position: absolute; right: 8px; bottom: 6px; background: rgba(0,0,0,.6); padding: 2px 6px; border-radius: 3px; pointer-events: none; font-size: 11px; }
+  #controls { display: flex; gap: 12px; align-items: center; padding: 6px 12px; background: var(--panel); flex-wrap: wrap; }
+  #time { flex: 1; min-width: 200px; }
+  #info { padding: 6px 12px; color: var(--muted); min-height: 40px; white-space: pre-wrap; font-family: ui-monospace, monospace; font-size: 11px; }
+  label { color: var(--muted); }
+  select, input[type=checkbox] { accent-color: var(--accent); }
+</style>
+</head>
+<body>
+<header>
+  <h1 id="title">itr viewer</h1>
+  <span id="summary"></span>
+  <span id="warn"></span>
+</header>
+<div id="maps"></div>
+<div id="controls">
+  <button id="play">▶</button>
+  <input id="time" type="range" min="0" max="0" value="0">
+  <span id="tlabel">t = 0 s</span>
+  <label>show <select id="layer"><option value="depth">depth at t</option><option value="peak">peak depth</option></select></label>
+  <label><input id="arrows" type="checkbox" checked> discharge arrows</label>
+  <label><input id="worse" type="checkbox" checked> newly worsened (&gt;1 cm)</label>
+  <label>vertical exaggeration of hillshade ×<select id="vex"><option>1</option><option selected>3</option><option>10</option></select></label>
+</div>
+<div id="info">Click an asset or an earthwork for details. Drag to pan, wheel to zoom (maps are synchronized).</div>
+<script src="viewer_data.js"></script>
+<script src="viewer.js"></script>
+</body>
+</html>
