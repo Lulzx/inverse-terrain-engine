@@ -1,0 +1,14 @@
+[package]
+name = "itr-gpu"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "Optional wgpu/WGSL GPU backend for the inverse terrain engine (spec 7.8)"
+
+[dependencies]
+itr-core = { path = "../itr-core" }
+itr-hydro = { path = "../itr-hydro" }
+wgpu = "30.0.1"
+pollster = "0.4"
+bytemuck = { version = "1", features = ["derive"] }

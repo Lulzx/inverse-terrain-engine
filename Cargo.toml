@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crates/itr-core", "crates/itr-hydro", "crates/itr-opt"]
+members = ["crates/itr-core", "crates/itr-hydro", "crates/itr-opt", "crates/itr-gpu"]
 
 [workspace.package]
 version = "0.1.0"
