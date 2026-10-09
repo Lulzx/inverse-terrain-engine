@@ -4,6 +4,7 @@ mod backend;
 mod cad;
 mod io;
 mod load;
+mod revalidate;
 mod run;
 mod serve;
 mod synth;
@@ -26,7 +27,7 @@ USAGE:
   itr inspect  <dem.tif>                               CRS, extent, nodata, z range, memory estimate
   itr simulate --scenario <s.toml> --out <dir> [--threads N] [--precision f32|f64]
   itr optimize --scenario <s.toml> --out <dir> [--max-sims N] [--max-cell-updates N] [--method cma_es|lq_cma_es|random|sobol|coordinate]
-               [--seed N] [--threads N] [--precision f32|f64] [--backend cpu|gpu] [--log-json <events.jsonl>]
+               [--seed N] [--threads N] [--precision f32|f64] [--backend cpu|gpu] [--log-json <events.jsonl>] [--no-revalidate]
   itr optimize --resume <dir> [--threads N]            exact resume (deterministic replay + cache)
   itr serve-eval --scenario <s.toml> [--threads N]     ask/tell JSON-lines evaluator on stdin/stdout (external optimizers)
   itr compare  --baseline <dir> --candidate <dir>
@@ -59,6 +60,7 @@ struct Args {
     serve: Option<u16>,
     log_json: Option<PathBuf>,
     backend: Option<String>,
+    no_revalidate: bool,
 }
 
 fn parse() -> Result<Args, lexopt::Error> {
@@ -84,6 +86,7 @@ fn parse() -> Result<Args, lexopt::Error> {
             Long("json") => a.json = true,
             Long("backend") => a.backend = Some(p.value()?.string()?),
             Long("log-json") => a.log_json = Some(p.value()?.into()),
+            Long("no-revalidate") => a.no_revalidate = true,
             Long("serve") => {
                 a.serve = Some(match p.optional_value() {
                     Some(v) => v.parse()?,
@@ -522,6 +525,22 @@ fn optimize<T: backend::Backends>(a: &Args, ld: load::Loaded) -> Res<i32> {
             "redundant_primitives": ab.attributions.iter().filter(|x| x.redundant).map(|x| x.index).collect::<Vec<_>>(),
             "shapley_j_reduction": ab.attributions.iter().map(|x| json!({"index": x.index, "value": x.shapley_j_reduction})).collect::<Vec<_>>()});
         io::write_json(&out.join("ablation.json"), &serde_json::to_value(&ab).unwrap())?;
+        // Model-exploitation check (§9.2): finer grid and alternate rainfall.
+        if !a.no_revalidate {
+            let t = Instant::now();
+            let rv = revalidate::revalidate::<T>(&ld.inputs, &b.record.primitives, a.threads)?;
+            for c in rv["cases"].as_array().into_iter().flatten() {
+                match c["skipped"].as_str() {
+                    Some(why) => eprintln!("revalidation {}: skipped ({why})", c["case"].as_str().unwrap_or("")),
+                    None => eprintln!("revalidation {:<14} J {:.5} → {:.5} ({:+.1}%), feasible {}{}", c["case"].as_str().unwrap_or(""),
+                        c["j_before"].as_f64().unwrap_or(f64::NAN), c["j_after"].as_f64().unwrap_or(f64::NAN),
+                        100.0 * c["relative_change"].as_f64().unwrap_or(f64::NAN), c["feasible"], if c["reversal"] == true { "  REVERSAL" } else { "" }),
+                }
+            }
+            eprintln!("revalidation: {:.1}s", t.elapsed().as_secs_f64());
+            metrics["revalidation"] = json!({"file": "revalidation.json", "reversals": rv["reversals"]});
+            io::write_json(&out.join("revalidation.json"), &rv)?;
+        }
         let feats: Vec<(Vec<(f64, f64)>, Value)> = b
             .record
             .primitives

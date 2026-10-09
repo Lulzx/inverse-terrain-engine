@@ -2,44 +2,80 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>itr viewer</title>
+<title>Inverse Terrain Engine — run report</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-  :root { --bg: #14161a; --panel: #1d2026; --fg: #e6e6e6; --muted: #9aa0a6; --accent: #4fa3ff; }
   * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--fg); font: 14px/1.45 system-ui, -apple-system, sans-serif; }
-  header { display: flex; gap: 16px; align-items: center; padding: 8px 12px; background: var(--panel); border-bottom: 1px solid #2b2f36; flex-wrap: wrap; }
-  header h1 { font-size: 18px; margin: 0; font-weight: 650; letter-spacing: -0.01em; }
-  #warn { color: #ffcf66; font-size: 11px; }
-  #maps { display: grid; grid-template-columns: repeat(var(--cols, 3), 1fr); gap: 6px; padding: 6px; height: calc(100vh - 150px); }
-  .map { position: relative; background: #000; border: 1px solid #2b2f36; overflow: hidden; }
-  .map canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
-  .map .label { position: absolute; left: 8px; top: 6px; background: rgba(0,0,0,.6); padding: 2px 6px; border-radius: 3px; pointer-events: none; }
-  .map .legend { position: absolute; right: 8px; bottom: 6px; background: rgba(0,0,0,.6); padding: 2px 6px; border-radius: 3px; pointer-events: none; font-size: 11px; }
-  #controls { display: flex; gap: 12px; align-items: center; padding: 6px 12px; background: var(--panel); flex-wrap: wrap; }
-  #time { flex: 1; min-width: 200px; }
-  #info { padding: 6px 12px; color: var(--muted); min-height: 40px; white-space: pre-wrap; font-family: ui-monospace, monospace; font-size: 11px; }
-  label { color: var(--muted); }
-  select, input[type=checkbox] { accent-color: var(--accent); }
+  [hidden] { display: none !important; }
+  body { margin: 0; background: #fff; color: #111; font: 13px/1.4 Helvetica, Arial, sans-serif; }
+  main { max-width: 1500px; margin: 0 auto; padding: 14px 18px 28px; }
+  h1 { font-size: 20px; font-weight: bold; margin: 0 0 2px; }
+  h2 { font-size: 13px; font-weight: bold; margin: 0 0 4px; }
+  p { margin: 0; }
+  #subtitle { color: #444; margin-bottom: 10px; }
+  table { border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  th, td { border: 1px solid #999; padding: 2px 8px; text-align: left; font-weight: normal; }
+  th { background: #f3f3f3; }
+  td.num, th.num { text-align: right; }
+  #summary { margin-bottom: 10px; }
+  #summary { width: auto; }
+  #summary th { white-space: nowrap; }
+  #summary td { min-width: 6em; }
+  #controls { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; border: 1px solid #999; padding: 5px 8px; margin: 0 0 12px; }
+  #controls label { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+  #time { width: 260px; max-width: 100%; }
+  #tlabel { font-variant-numeric: tabular-nums; min-width: 12ch; }
+  button, select { font: inherit; }
+  #maps { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px 18px; }
+  #maps.c1 { max-width: 640px; }
+  @media (min-width: 1000px) { #maps.c3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  .fig .title { margin: 0 12px 0 46px; font-size: 16px; }
+  .plot { position: relative; margin: 8px 18px 34px 46px; }
+  .map { position: relative; border: 1px solid #000; background: #fff; overflow: hidden; }
+  .map canvas { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+  .plot > canvas.ax { position: absolute; left: -46px; top: -8px; width: calc(100% + 46px + 18px); height: calc(100% + 34px + 8px); pointer-events: none; }
+  canvas.cb { display: block; width: 100%; height: 52px; }
+  #legend { display: flex; flex-wrap: wrap; gap: 4px 20px; margin: 10px 0 6px; font-size: 11px; align-items: center; }
+  #legend span { display: inline-flex; align-items: center; gap: 6px; }
+  #legend i { display: inline-block; width: 22px; height: 11px; }
+  .sw-asset { border: 1.5px solid #000; }
+  .sw-earth { border: 1.5px dashed #8b0000; }
+  .sw-worse { border: 1px solid #000; background: repeating-linear-gradient(135deg, #000 0 1px, #fff 1px 3px); }
+  .sw-arrow { height: 0 !important; border-top: 1px solid #222; position: relative; }
+  .sw-arrow::after { content: ""; position: absolute; right: 0; top: -3px; border-left: 5px solid #222; border-top: 3px solid transparent; border-bottom: 3px solid transparent; }
+  #caption { font-size: 11px; max-width: 1100px; margin-bottom: 14px; }
+  .box { border: 1px solid #999; padding: 6px 8px; margin-bottom: 14px; max-width: 720px; }
+  .tbl { margin-bottom: 14px; }
+  .tbl .cap { font-size: 11px; margin-bottom: 3px; }
+  #inspect th { width: 11em; background: #f3f3f3; }
+  #inspect td { min-width: 24em; }
+  #inspect td.hint { min-width: 0; border: 0; padding-left: 0; }
+  .hint { color: #555; }
 </style>
 </head>
 <body>
-<header>
-  <h1 id="title">itr viewer</h1>
-  <span id="summary"></span>
-  <span id="warn"></span>
-</header>
-<div id="maps"></div>
-<div id="controls">
-  <button id="play">▶</button>
-  <input id="time" type="range" min="0" max="0" value="0">
+<main>
+<h1>Inverse Terrain Engine — run report</h1>
+<p id="subtitle"></p>
+<table id="summary"></table>
+<form id="controls" onsubmit="return false">
+  <label>Time <input id="time" type="range" min="0" max="0" value="0"></label>
   <span id="tlabel">t = 0 s</span>
-  <label>show <select id="layer"><option value="depth">depth at t</option><option value="peak">peak depth</option></select></label>
-  <label><input id="arrows" type="checkbox" checked> discharge arrows</label>
-  <label><input id="worse" type="checkbox" checked> newly worsened (&gt;1 cm)</label>
-  <label>vertical exaggeration of hillshade ×<select id="vex"><option>1</option><option selected>3</option><option>10</option></select></label>
+  <button id="play" type="button">Play</button>
+  <label>Layer <select id="layer"><option value="depth">Depth at t</option><option value="peak">Peak depth</option></select></label>
+  <label><input id="arrows" type="checkbox" checked> Discharge arrows</label>
+  <label><input id="worse" type="checkbox" checked> Newly worsened (&gt;1 cm)</label>
+  <label>Hillshade vertical exaggeration <select id="vex"><option>1</option><option selected>3</option><option>10</option></select></label>
+</form>
+<div id="maps"></div>
+<div id="legend"></div>
+<p id="caption"></p>
+<div class="box">
+  <h2>Point inspection</h2>
+  <table id="inspect"><tr><td class="hint">Click a map cell, asset or earthwork. Drag to pan, wheel to zoom, double-click to reset (maps are synchronized).</td></tr></table>
 </div>
-<div id="info">Click an asset or an earthwork for details. Drag to pan, wheel to zoom (maps are synchronized).</div>
+<div id="tables"></div>
+</main>
 <script src="viewer_data.js"></script>
 <script src="viewer.js"></script>
 </body>

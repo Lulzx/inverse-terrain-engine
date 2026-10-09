@@ -54,3 +54,14 @@ Run `itr validate [--precision f32|f64|both] [--json]`. Each case uses the produ
 `itr bench --backend gpu` reports the max |Δ peak depth| against CPU `f32` (D3).
 
 `examples/infeasible-problem` must exit with code 2.
+
+## Revalidation of the final design
+
+`itr optimize` re-runs the best design against no-change in three cases the search never saw (spec §9.2), and writes `revalidation.json`:
+
+| Case | Change |
+|---|---|
+| `finer_grid_2x` | DEM bilinearly refined to half the cell size; masks and Manning's n by nearest parent. Skipped above 4 × 10⁶ cells |
+| `rain_x0.5`, `rain_x1.5` | Every hyetograph rate scaled; native grid |
+
+A case is a **reversal** if the design is infeasible there or does not lower J. Reversals are listed in `metrics.json` (`revalidation.reversals`) and printed; they are never dropped. `--no-revalidate` skips the check.
