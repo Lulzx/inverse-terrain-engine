@@ -12,11 +12,13 @@ Inputs (produced by `itr` and scripts/lever_study.py):
 """
 
 import json
+import warnings
 from pathlib import Path
 
 import matplotlib
 
 matplotlib.use("Agg")
+warnings.filterwarnings("ignore", category=RuntimeWarning)
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 import tifffile  # noqa: E402
@@ -141,7 +143,8 @@ def best_so_far(trace, n):
     y = np.full(n, np.nan)
     best = np.nan
     for k, e in enumerate(trace[:n]):
-        if e["feasible"] and (np.isnan(best) or e["j"] < best):
+        # Only full-resolution (level 1) values are comparable with the no-change J.
+        if e["feasible"] and e["level"] == 1 and (np.isnan(best) or e["j"] < best):
             best = e["j"]
         y[k] = best
     return y
@@ -152,24 +155,29 @@ def fig_convergence(opt, out):
     fig, axs = plt.subplots(1, len(scen), figsize=(7.2, 2.6), constrained_layout=True)
     for ax, s, letter in zip(axs, scen, "abcd"):
         base = None
+        first = min(next(k for k, e in enumerate(r["trace"]) if e["level"] == 1) for rs in opt["scenarios"][s].values() for r in rs)
         for m, runs in opt["scenarios"][s].items():
             n = min(len(r["trace"]) for r in runs)
             Y = np.array([best_so_far(r["trace"], n) for r in runs])
             base = runs[0]["j_baseline"]
-            Y = np.where(np.isnan(Y), base, Y)
             x = np.arange(1, n + 1)
             c, ls = METHOD_STYLE[m]
-            med = np.median(Y, 0)
+            with np.errstate(all="ignore"):
+                med = np.nanmedian(Y, 0)
             ax.plot(x, med, color=c, ls=ls, lw=1.1, label=METHOD_LABEL[m])
-            ax.fill_between(x, np.percentile(Y, 25, 0), np.percentile(Y, 75, 0), color=c, alpha=0.12, lw=0)
+            with np.errstate(all="ignore"):
+                ax.fill_between(x, np.nanpercentile(Y, 25, 0), np.nanpercentile(Y, 75, 0), color=c, alpha=0.12, lw=0)
         ax.axhline(base, color="k", lw=0.6, ls=(0, (1, 2)))
-        ax.text(1.5, base, "no change", va="bottom", fontsize=7)
+        ax.text(n * 0.98, base, "no change", va="bottom", ha="right", fontsize=7)
+        if first > 0:
+            ax.axvspan(1, first + 0.5, color="0.92", lw=0, zorder=0)
+            ax.text(first / 2, base, "coarse-level\nscreening\n(not shown)", ha="center", va="top", fontsize=7)
         ax.set_xlabel("Evaluation index")
         ax.set_ylabel("Best feasible objective $J$")
         ax.set_title(f"{s} ({len(runs)} seeds, median and IQR)")
         ax.set_xlim(1, None)
         panel(ax, letter)
-    axs[0].legend(loc="upper right")
+    axs[-1].legend(loc="center right")
     fig.savefig(out)
     plt.close(fig)
 
@@ -196,7 +204,7 @@ def fig_levers(lev, out):
         ax.set_xlim(0, max(max(cu), max(wt)) * 1.45)
         ax.tick_params(axis="y", which="both", right=False, left=False)
         panel(ax, letter)
-    axs[0].legend(loc="lower right")
+    axs[-1].legend(loc="lower right")
     fig.savefig(out)
     plt.close(fig)
 
@@ -265,6 +273,9 @@ def fig_bench(bench, out):
                 mfc="white" if p == "f64" else None, label=f"{n}², {p}")
     ax.set_xscale("log", base=2)
     ax.set_yscale("log")
+    ax.set_xticks([1, 2, 4, 8], ["1", "2", "4", "8"])
+    ax.set_yticks([50, 100, 200, 400, 800], ["50", "100", "200", "400", "800"])
+    ax.minorticks_off()
     ax.set_xlabel("Threads (grid-parallel)")
     ax.set_ylabel("Cell-updates s$^{-1}$ ($\\times 10^6$)")
     ax.legend(loc="upper left", ncol=2)
@@ -282,7 +293,7 @@ def main():
     fig_mass(df, IMG / "fig5_mass_balance.png")
     bench = DATA / "bench.json"
     if bench.exists():
-        fig_bench(json.loads(bench.read_text()), IMG / "fig6_throughput.png")
+        fig_bench(json.loads(bench.read_text())["cases"], IMG / "fig6_throughput.png")
 
 
 if __name__ == "__main__":

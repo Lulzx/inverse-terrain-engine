@@ -1,0 +1,231 @@
+{
+ "host": {
+  "cpu": "Apple M4 Pro",
+  "os": "macOS-27.0.1-arm64-arm-64bit",
+  "logical_cpus": 12,
+  "load_average_at_start": [
+   7.17822265625,
+   6.556640625,
+   7.38232421875
+  ]
+ },
+ "scenarios": {
+  "synthetic-valley": [
+   {
+    "variant": "reference",
+    "description": "example as shipped: CMA-ES, levels [2, 1], adaptive \u0394t",
+    "outcome": "improved_partial",
+    "j_baseline": 0.3092108669975927,
+    "j_best": 0.2119166125072075,
+    "simulations": 124,
+    "cell_updates": 4079704550,
+    "search_wall_s": 4.1922165,
+    "utilization": 0.8350242769259594,
+    "total_wall_s": 5.386323928833008,
+    "status_counts": {
+     "ok": 118,
+     "guard_abort": 6
+    }
+   },
+   {
+    "variant": "single_level",
+    "description": "multi-fidelity off: all simulations at level 1",
+    "outcome": "improved_partial",
+    "j_baseline": 0.3092108669975927,
+    "j_best": 0.23559171382224237,
+    "simulations": 120,
+    "cell_updates": 7803412400,
+    "search_wall_s": 8.230876542,
+    "utilization": 0.8887965306200624,
+    "total_wall_s": 9.518579959869385,
+    "status_counts": {
+     "ok": 109,
+     "guard_abort": 11
+    }
+   },
+   {
+    "variant": "local_inertial",
+    "description": "local-inertial physics on level 2",
+    "outcome": "improved_partial",
+    "j_baseline": 0.3092108669975927,
+    "j_best": 0.22621267397403033,
+    "simulations": 124,
+    "cell_updates": 3310585000,
+    "search_wall_s": 5.816149458,
+    "utilization": 0.6730603243402449,
+    "total_wall_s": 7.20019793510437,
+    "status_counts": {
+     "ok": 105,
+     "guard_abort": 19
+    }
+   },
+   {
+    "variant": "locked_dt",
+    "description": "baseline-locked \u0394t",
+    "outcome": "improved_partial",
+    "j_baseline": 0.3092108669975927,
+    "j_best": 0.19994108206409827,
+    "simulations": 124,
+    "cell_updates": 4062431000,
+    "search_wall_s": 4.8670365,
+    "utilization": 0.8252132035347057,
+    "total_wall_s": 6.14323616027832,
+    "status_counts": {
+     "ok": 119,
+     "guard_abort": 5
+    }
+   },
+   {
+    "variant": "locked_dt_replay",
+    "description": "baseline-locked \u0394t + subdomain replay",
+    "outcome": "improved_partial",
+    "j_baseline": 0.3092108669975927,
+    "j_best": 0.19994108206409827,
+    "simulations": 124,
+    "cell_updates": 4062431000,
+    "search_wall_s": 4.559740625,
+    "utilization": 0.8485818179475718,
+    "total_wall_s": 5.810433864593506,
+    "status_counts": {
+     "ok": 119,
+     "guard_abort": 5
+    }
+   },
+   {
+    "variant": "threads_1",
+    "description": "one worker (candidate parallelism off)",
+    "outcome": "improved_partial",
+    "j_baseline": 0.3092108669975927,
+    "j_best": 0.2119166125072075,
+    "simulations": 124,
+    "cell_updates": 4079704550,
+    "search_wall_s": 29.112543875,
+    "utilization": 0.9997650735773196,
+    "total_wall_s": 34.73692488670349,
+    "status_counts": {
+     "ok": 118,
+     "guard_abort": 6
+    }
+   },
+   {
+    "variant": "f64",
+    "description": "f64 oracle precision",
+    "outcome": "improved_partial",
+    "j_baseline": 0.3092201151307074,
+    "j_best": 0.21191611435608715,
+    "simulations": 124,
+    "cell_updates": 4079704400,
+    "search_wall_s": 10.189289167,
+    "utilization": 0.8403650018846475,
+    "total_wall_s": 12.64185881614685,
+    "status_counts": {
+     "ok": 118,
+     "guard_abort": 6
+    }
+   }
+  ],
+  "diverted-flood": [
+   {
+    "variant": "reference",
+    "description": "example as shipped: CMA-ES, corridor placement, level 1",
+    "outcome": "improved_meets_thresholds",
+    "j_baseline": 0.027851419855710702,
+    "j_best": 0.008261447332724405,
+    "simulations": 202,
+    "cell_updates": 5211661320,
+    "search_wall_s": 6.051963375,
+    "utilization": 0.7928688574518411,
+    "total_wall_s": 6.582619905471802,
+    "status_counts": {
+     "ok": 180,
+     "guard_abort": 22,
+     "static_infeasible": 14
+    }
+   },
+   {
+    "variant": "free_placement",
+    "description": "corridor design space off",
+    "outcome": "improved_partial",
+    "j_baseline": 0.027851419855710702,
+    "j_best": 0.021173041992689847,
+    "simulations": 209,
+    "cell_updates": 4577607450,
+    "search_wall_s": 5.445958583,
+    "utilization": 0.7740535488329904,
+    "total_wall_s": 5.9125707149505615,
+    "status_counts": {
+     "ok": 181,
+     "guard_abort": 28
+    }
+   },
+   {
+    "variant": "locked_dt",
+    "description": "baseline-locked \u0394t",
+    "outcome": "improved_meets_thresholds",
+    "j_baseline": 0.027851419855710702,
+    "j_best": 0.008261447332724405,
+    "simulations": 202,
+    "cell_updates": 4556366550,
+    "search_wall_s": 5.546409292,
+    "utilization": 0.799529164643371,
+    "total_wall_s": 6.004721164703369,
+    "status_counts": {
+     "ok": 180,
+     "guard_abort": 22,
+     "static_infeasible": 14
+    }
+   },
+   {
+    "variant": "locked_dt_replay",
+    "description": "baseline-locked \u0394t + subdomain replay",
+    "outcome": "improved_meets_thresholds",
+    "j_baseline": 0.027851419855710702,
+    "j_best": 0.008261447332724405,
+    "simulations": 202,
+    "cell_updates": 4556366550,
+    "search_wall_s": 5.252243083,
+    "utilization": 0.8055090445914639,
+    "total_wall_s": 5.720795154571533,
+    "status_counts": {
+     "ok": 180,
+     "guard_abort": 22,
+     "static_infeasible": 14
+    }
+   },
+   {
+    "variant": "threads_1",
+    "description": "one worker (candidate parallelism off)",
+    "outcome": "improved_meets_thresholds",
+    "j_baseline": 0.027851419855710702,
+    "j_best": 0.008261447332724405,
+    "simulations": 202,
+    "cell_updates": 5211661320,
+    "search_wall_s": 38.416841958,
+    "utilization": 0.9995619431021503,
+    "total_wall_s": 39.87017607688904,
+    "status_counts": {
+     "ok": 180,
+     "guard_abort": 22,
+     "static_infeasible": 14
+    }
+   },
+   {
+    "variant": "f64",
+    "description": "f64 oracle precision",
+    "outcome": "improved_meets_thresholds",
+    "j_baseline": 0.02785146271250377,
+    "j_best": 0.008261446220828788,
+    "simulations": 202,
+    "cell_updates": 5211667620,
+    "search_wall_s": 12.679890333,
+    "utilization": 0.7943023135905779,
+    "total_wall_s": 13.58910083770752,
+    "status_counts": {
+     "ok": 180,
+     "guard_abort": 22,
+     "static_infeasible": 14
+    }
+   }
+  ]
+ }
+}
